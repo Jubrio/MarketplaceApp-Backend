@@ -1,0 +1,12 @@
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\bin\Debug\net8.0\MarketplaceApp.Domain.deps.json
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\bin\Debug\net8.0\MarketplaceApp.Domain.dll
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\bin\Debug\net8.0\MarketplaceApp.Domain.pdb
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\MarketplaceApp.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\MarketplaceApp.Domain.AssemblyInfoInputs.cache
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\MarketplaceApp.Domain.AssemblyInfo.cs
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\MarketplaceApp.Domain.csproj.CoreCompileInputs.cache
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\MarketplaceApp.Domain.sourcelink.json
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\MarketplaceApp.Domain.dll
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\refint\MarketplaceApp.Domain.dll
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\MarketplaceApp.Domain.pdb
+C:\Mes Projet\MarketplaceApp\MarketplaceApp.Domain\obj\Debug\net8.0\ref\MarketplaceApp.Domain.dll
