@@ -6,8 +6,10 @@ public class Category
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public int? ParentId { get; set; }
+    public int? VendorId { get; set; } 
 
     public Category? Parent { get; set; }
     public ICollection<Category> SubCategories { get; set; } = new List<Category>();
     public ICollection<Product> Products { get; set; } = new List<Product>();
+    public User? Vendor { get; set; } 
 }
