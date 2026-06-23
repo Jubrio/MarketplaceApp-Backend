@@ -1,2 +1,33 @@
-*.json
-.env
+# Fichiers de configuration sensibles
+**/appsettings.json
+**/appsettings.Development.json
+
+# Dossiers générés par le build
+**/bin/
+**/obj/
+**/node_modules/
+
+# Fichiers locaux
+*.user
+*.suo
+*.pidb
+*.sqlite
+*.db
+*.cache
+*.orig
+*.tmp
+*.temp
+
+# Logs
+*.log
+**/Logs/
+
+# Fichiers de l'IDE
+.vscode/
+.idea/
+*.sln.iml
+
+# Frontend (si tu veux exclure les dépendances)
+**/node_modules/
+**/dist/
+**/build/
