@@ -25,5 +25,7 @@ public class Order
     public decimal? DiscountAmount { get; set; }
     public string? PromotionCodeApplied { get; set; }
     public Promotion? Promotion { get; set; }
+    public string? CancellationReason { get; set; }
+    
 
 }

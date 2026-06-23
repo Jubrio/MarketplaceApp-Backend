@@ -53,6 +53,9 @@ public class AuthService : IAuthService
         if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
             throw new Exception("Email ou mot de passe incorrect.");
 
+        if (!user.IsActive)
+        throw new Exception("Votre compte a été désactivé par l'administrateur.");
+
         return new AuthResponseDto
         {
             Token = GenerateToken(user),

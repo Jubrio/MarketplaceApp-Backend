@@ -55,16 +55,20 @@ public class OrdersController : ControllerBase
     [Authorize(Roles = "Vendor,Admin")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
     {
+        Console.WriteLine($"[DEBUG] DTO reçu: Status={dto.Status}, CancellationReason={dto.CancellationReason}");
+
         var validStatuses = new[] { "Pending", "Confirmed", "Shipped", "Delivered", "Cancelled" };
         if (!validStatuses.Contains(dto.Status))
             return BadRequest(new { message = "Statut invalide." });
 
-        var result = await _orderService.UpdateStatusAsync(id, dto.Status);
+        var result = await _orderService.UpdateStatusAsync(id, dto.Status, dto.CancellationReason);
         if (!result) return NotFound();
         return Ok(new { message = "Statut mis à jour." });
     }
 }
+
 public class UpdateOrderStatusDto
 {
     public string Status { get; set; } = string.Empty;
+    public string? CancellationReason { get; set; }
 }

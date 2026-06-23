@@ -11,12 +11,14 @@ public class OrderService : IOrderService
     private readonly AppDbContext _context;
     private readonly INotificationService _notificationService;
     private readonly IPromotionService _promotionService;
+    private readonly IEmailService _emailService;
 
-    public OrderService(AppDbContext context, INotificationService notificationService, IPromotionService promotionService)
+    public OrderService(AppDbContext context, INotificationService notificationService, IPromotionService promotionService, IEmailService emailService)
     {
         _context = context;
         _notificationService = notificationService;
         _promotionService = promotionService;
+        _emailService = emailService;
     }
 
     public async Task<List<OrderResponseDto>> CreateFromCartAsync(int buyerId, CreateOrderDto dto)
@@ -161,17 +163,148 @@ public class OrderService : IOrderService
         return orders.Select(o => MapToDto(o, o.Items.Select(i => i.Product).ToList(), o.Buyer)).ToList();
     }
 
-    public async Task<bool> UpdateStatusAsync(int orderId, string status)
+     public async Task<bool> UpdateStatusAsync(int orderId, string status, string? cancellationReason = null)
     {
-        var order = await _context.Orders.FindAsync(orderId);
+        Console.WriteLine($"[DEBUG] UpdateStatusAsync - Commande {orderId}, Nouveau statut: '{status}'");
+
+        var order = await _context.Orders
+            .Include(o => o.Buyer)
+            .Include(o => o.Shop)
+                .ThenInclude(s => s.Vendor)
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
         if (order == null) return false;
 
         var oldStatus = order.Status;
         order.Status = status;
+
+        if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(cancellationReason))
+        {
+            order.CancellationReason = cancellationReason;
+            Console.WriteLine($"[DEBUG] Raison d'annulation enregistrée : '{cancellationReason}'");
+        }
+        else if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("[DEBUG] Annulation sans raison (cancellationReason est null ou vide)");
+        }
+
         await _context.SaveChangesAsync();
+
         await _notificationService.NotifyOrderStatusChangeAsync(orderId, oldStatus, status);
+
+        Console.WriteLine($"[DEBUG] Statut mis à jour de '{oldStatus}' à '{status}'");
+
+        if (status.Equals("Shipped", StringComparison.OrdinalIgnoreCase) ||
+            status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ||
+            status.Equals("Delivered", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"[DEBUG] Statut '{status}' déclenche l'envoi d'email.");
+            var buyer = order.Buyer;
+            if (buyer != null && !string.IsNullOrWhiteSpace(buyer.Email))
+            {
+                Console.WriteLine($"[DEBUG] Email de l'acheteur: {buyer.Email}");
+                await SendStatusEmailAsync(order, status, cancellationReason);
+                Console.WriteLine($"[DEBUG] Email envoyé avec succès.");
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] Email non envoyé : acheteur sans email (Id={buyer?.Id})");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"[DEBUG] Statut '{status}' ne déclenche pas d'email.");
+        }
+
         return true;
     }
+
+    private async Task SendStatusEmailAsync(Order order, string status, string? reason)
+    {
+        try
+        {
+            var buyer = order.Buyer;
+            if (buyer == null || string.IsNullOrWhiteSpace(buyer.Email))
+            {
+                Console.WriteLine($"[ERREUR] Email non envoyé : acheteur sans email (commande {order.Id})");
+                return;
+            }
+
+            Console.WriteLine($"[DEBUG] Raison reçue dans SendStatusEmailAsync : '{reason ?? "null"}'");
+
+            var shop = order.Shop;
+            var items = order.Items.ToList();
+
+            string subject = status.ToLower() switch
+            {
+                "shipped" => "Votre commande a été expédiée !",
+                "delivered" => "Votre commande a été livrée !",
+                "cancelled" => "Votre commande a été annulée",
+                _ => "Mise à jour de votre commande"
+            };
+
+            string reasonHtml = "";
+            if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(reason))
+            {
+                reasonHtml = $@"
+                <div style='background-color:#f8d7da; border:1px solid #f5c6cb; padding:10px; margin:10px 0; border-radius:4px;'>
+                    <strong>Raison :</strong> {reason}
+                </div>";
+            }
+
+            var itemsHtml = string.Join("", items.Select(i => $@"
+                <li style='margin-bottom:10px;'>
+                    <img src='{(i.Product?.ImageUrl ?? "")}' alt='{i.Product?.Name}' style='width:50px;height:50px;object-fit:cover;vertical-align:middle;margin-right:10px;'/>
+                    <strong>{i.Product?.Name}</strong> x {i.Quantity} – {(i.UnitPrice * i.Quantity):F2} AR
+                </li>
+            "));
+
+            var htmlBody = $@"
+            <html>
+            <body style='font-family: Arial, sans-serif;'>
+                <h2>{subject}</h2>
+                <p>Bonjour {buyer.FullName},</p>
+                <p>Votre commande n°{order.Id} est <strong>{TranslateStatus(status)}</strong>.</p>
+                {reasonHtml}
+                <hr/>
+                <h3>Détails de la commande :</h3>
+                <ul>
+                    {itemsHtml}
+                </ul>
+                <p><strong>Total :</strong> {order.TotalAmount:F2} AR</p>
+                <p><strong>Boutique :</strong> {shop?.Name}</p>
+                <p><strong>Vendeur :</strong> {shop?.Vendor?.FullName}</p>
+                <p><strong>Email du vendeur :</strong> {shop?.Vendor?.Email}</p>
+                <hr/>
+                <p>Merci de votre confiance.</p>
+            </body>
+            </html>
+            ";
+
+            Console.WriteLine($"[DEBUG] HTML de l'email : {htmlBody}");
+
+            Console.WriteLine($"[DEBUG] Tentative d'envoi d'email à {buyer.Email}...");
+            await _emailService.SendOrderStatusEmailAsync(buyer.Email, buyer.FullName, subject, htmlBody);
+            Console.WriteLine($"[DEBUG] Email envoyé avec succès à {buyer.Email}.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERREUR] Échec de l'envoi d'email pour la commande {order.Id} : {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
+    }
+
+    private string TranslateStatus(string status) => status.ToLower() switch
+    {
+        "pending" => "En attente",
+        "confirmed" => "Confirmée",
+        "shipped" => "Expédiée",
+        "delivered" => "Livrée",
+        "cancelled" => "Annulée",
+        _ => status
+    };
 
     private static OrderResponseDto MapToDto(Order o, List<Product> products, User? buyer)
     {
@@ -193,6 +326,7 @@ public class OrderService : IOrderService
             PaymentMethod = o.PaymentMethod,
             DiscountAmount = o.DiscountAmount,
             PromotionCodeApplied = o.PromotionCodeApplied,
+            CancellationReason = o.CancellationReason,
             Items = o.Items.Select(i => new OrderItemResponseDto
             {
                 OrderItemId = i.Id,

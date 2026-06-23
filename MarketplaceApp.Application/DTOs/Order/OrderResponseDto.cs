@@ -22,8 +22,7 @@ public class OrderResponseDto
 
     public decimal? DiscountAmount { get; set; }
     public string? PromotionCodeApplied { get; set; }
-
-
+    public string? CancellationReason { get; set; }
     public List<OrderItemResponseDto> Items { get; set; } = new();
 }
 

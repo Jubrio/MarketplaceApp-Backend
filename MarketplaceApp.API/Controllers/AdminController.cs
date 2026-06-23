@@ -2,6 +2,7 @@ using MarketplaceApp.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using BCrypt.Net;
 
 namespace MarketplaceApp.API.Controllers;
 
@@ -41,6 +42,7 @@ public class AdminController : ControllerBase
                 u.Email,
                 u.Role,
                 u.IsActive,
+                u.ProfileImageUrl, 
                 u.CreatedAt
             }).ToListAsync();
         return Ok(users);
@@ -68,6 +70,7 @@ public class AdminController : ControllerBase
                 s.IsApproved,
                 s.CommissionRate,
                 s.CreatedAt,
+                s.LogoUrl, 
                 VendorName = s.Vendor.FullName,
                 VendorEmail = s.Vendor.Email
             }).ToListAsync();
@@ -143,24 +146,32 @@ public class AdminController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok(new { message = "Catégorie supprimée." });
     }
+
     [HttpPost("create-admin")]
-public async Task<IActionResult> CreateAdmin([FromBody] RegisterAdminDto dto)
-{
-    var exists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
-    if (exists) return BadRequest(new { message = "Email déjà utilisé." });
-
-    var user = new MarketplaceApp.Domain.Entities.User
+    public async Task<IActionResult> CreateAdmin([FromBody] RegisterAdminDto dto)
     {
-        FullName = dto.FullName,
-        Email = dto.Email,
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-        Role = "Admin",
-        IsActive = true
-    };
+        var exists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
+        if (exists) return BadRequest(new { message = "Email déjà utilisé." });
 
-    _context.Users.Add(user);
-    await _context.SaveChangesAsync();
-    return Ok(new { message = "Compte admin créé avec succès." });
+        var user = new MarketplaceApp.Domain.Entities.User
+        {
+            FullName = dto.FullName,
+            Email = dto.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            Role = "Admin",
+            IsActive = true
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Compte admin créé avec succès." });
+    }
+}
+
+public class CreateCategoryDto
+{
+    public string Name { get; set; } = string.Empty;
+    public int? ParentId { get; set; }
 }
 
 public class RegisterAdminDto
@@ -168,12 +179,4 @@ public class RegisterAdminDto
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
-}
-
-}
-
-public class CreateCategoryDto
-{
-    public string Name { get; set; } = string.Empty;
-    public int? ParentId { get; set; }
 }

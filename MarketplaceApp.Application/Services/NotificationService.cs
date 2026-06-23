@@ -102,29 +102,46 @@ public class NotificationService : INotificationService
     }
 
     public async Task NotifyOrderStatusChangeAsync(int orderId, string oldStatus, string newStatus)
+{
+    var order = await _context.Orders
+        .Include(o => o.Buyer)
+        .Include(o => o.Shop)
+            .ThenInclude(s => s.Vendor)
+        .Include(o => o.Items)
+            .ThenInclude(i => i.Product)
+        .FirstOrDefaultAsync(o => o.Id == orderId);
+
+    if (order == null) return;
+
+    var newTranslated = TranslateStatus(newStatus);
+    var productNames = order.Items
+        .Select(i => i.Product?.Name)
+        .Where(n => !string.IsNullOrEmpty(n))
+        .ToList();
+
+    string productDisplay;
+    if (productNames.Count == 0)
+        productDisplay = "vos articles";
+    else if (productNames.Count == 1)
+        productDisplay = productNames.First();
+    else
+        productDisplay = $"{productNames.First()} et {productNames.Count - 1} autre(s)";
+
+    var shopName = order.Shop?.Name ?? "la boutique";
+
+    await CreateNotificationAsync(order.BuyerId,
+        "Statut de commande mis à jour",
+        $"Votre commande de {productDisplay}, chez {shopName} est '{newTranslated}'.",
+        "Order", "/mes-commandes");
+
+    if (newStatus == "Delivered")
     {
-        var order = await _context.Orders
-            .Include(o => o.Buyer)
-            .Include(o => o.Shop).ThenInclude(s => s.Vendor)
-            .FirstOrDefaultAsync(o => o.Id == orderId);
-        if (order == null) return;
-
-        var oldTranslated = TranslateStatus(oldStatus);
-        var newTranslated = TranslateStatus(newStatus);
-        
-        await CreateNotificationAsync(order.BuyerId,
-            "Statut de commande mis à jour",
-            $"Votre commande #{orderId} est '{newTranslated}'.",
-            "Order", "/mes-commandes");
-
-        if (newStatus == "Delivered")
-        {
-            await CreateNotificationAsync(order.Shop.VendorId,
-                "Commande livrée",
-                $"La commande #{orderId} a été livrée à {order.Buyer.FullName}.",
-                "Order", "/vendor");
-        }
+        await CreateNotificationAsync(order.Shop.VendorId,
+            "Commande livrée",
+            $"La commande de {productDisplay} (n°{orderId}) a été livrée à {order.Buyer.FullName}.",
+            "Order", "/vendor");
     }
+}
 
     public async Task NotifyNewOrderAsync(int shopId, int orderId)
     {

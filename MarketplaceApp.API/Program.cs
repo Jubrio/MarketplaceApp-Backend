@@ -2,6 +2,7 @@ using MarketplaceApp.Infrastructure.Data;
 using MarketplaceApp.Application.Interfaces;
 using MarketplaceApp.Application.Services;
 using MarketplaceApp.Infrastructure.Hubs;
+using MarketplaceApp.Infrastructure.Services;
 using MarketplaceApp.API.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -51,6 +52,7 @@ builder.Services.AddScoped<IProductPromotionService, ProductPromotionService>();
 builder.Services.AddScoped<INotificationSender, SignalRNotificationSender>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPromotionService, PromotionService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 
 builder.Services.AddAuthorization();

@@ -29,7 +29,17 @@ public class ProductService : IProductService
             .Include(p => p.Category)
             .Where(p => p.IsActive)
             .ToListAsync();
-            
+
+        var reviewStats = await _context.Reviews
+            .GroupBy(r => r.OrderItem.ProductId)
+            .Select(g => new
+            {
+                ProductId = g.Key,
+                Average = g.Average(r => (decimal)r.Rating),
+                Count = g.Count()
+            })
+            .ToDictionaryAsync(x => x.ProductId);
+
         return products.Select(p =>
         {
             var hasPromo = activePromotionsDict.TryGetValue(p.Id, out var promo);
@@ -45,6 +55,8 @@ public class ProductService : IProductService
                     ? p.Price * (1 - promo.Value / 100)
                     : p.Price - promo.Value;
             }
+
+            var stats = reviewStats.TryGetValue(p.Id, out var s) ? s : null;
 
             return new ProductDto
             {
@@ -64,7 +76,9 @@ public class ProductService : IProductService
                 HasPromotion = hasPromo,
                 DiscountedPrice = discountedPrice,
                 PromotionType = promoType,
-                PromotionValue = promoValue
+                PromotionValue = promoValue,
+                AverageRating = stats?.Average ?? 0,
+                ReviewCount = stats?.Count ?? 0
             };
         }).ToList();
     }
@@ -82,6 +96,16 @@ public class ProductService : IProductService
 
         var promo = await _context.ProductPromotions
             .FirstOrDefaultAsync(p => p.ProductId == id && p.IsActive && p.StartDate <= now && p.EndDate >= now);
+
+        var reviewStats = await _context.Reviews
+            .Where(r => r.OrderItem.ProductId == id)
+            .GroupBy(r => r.OrderItem.ProductId)
+            .Select(g => new
+            {
+                Average = g.Average(r => (decimal)r.Rating),
+                Count = g.Count()
+            })
+            .FirstOrDefaultAsync();
 
         return new ProductDto
         {
@@ -103,7 +127,9 @@ public class ProductService : IProductService
                 ? promo.Type == "Percentage" ? product.Price * (1 - promo.Value / 100) : product.Price - promo.Value
                 : null,
             PromotionType = promo?.Type,
-            PromotionValue = promo?.Value
+            PromotionValue = promo?.Value,
+            AverageRating = reviewStats?.Average ?? 0,
+            ReviewCount = reviewStats?.Count ?? 0
         };
     }
 

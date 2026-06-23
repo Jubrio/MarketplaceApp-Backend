@@ -19,4 +19,6 @@ public class ProductDto
     public string? PromotionType { get; set; }
     public decimal? PromotionValue { get; set; }
     public int? LowStockThreshold { get; set; }
+    public decimal AverageRating { get; set; }
+    public int ReviewCount { get; set; }
 }
