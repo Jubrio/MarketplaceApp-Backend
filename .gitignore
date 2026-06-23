@@ -1,13 +1,10 @@
-# Fichiers de configuration sensibles
 **/appsettings.json
 **/appsettings.Development.json
 
-# Dossiers générés par le build
 **/bin/
 **/obj/
 **/node_modules/
 
-# Fichiers locaux
 *.user
 *.suo
 *.pidb
@@ -22,12 +19,10 @@
 *.log
 **/Logs/
 
-# Fichiers de l'IDE
 .vscode/
 .idea/
 *.sln.iml
 
-# Frontend (si tu veux exclure les dépendances)
 **/node_modules/
 **/dist/
 **/build/
